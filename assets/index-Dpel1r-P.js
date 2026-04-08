@@ -3418,6 +3418,10 @@ function Oa() {
     Be(300, "sawtooth", .4, .2), setTimeout(() => Be(250, "sawtooth", .4, .2), 300), setTimeout(() => Be(200, "sawtooth", .8, .2), 600)
 }
 
+function Bg() {
+    Be(880, "square", .2, .1), setTimeout(() => Be(659.25, "square", .2, .1), 100), setTimeout(() => Be(554.37, "square", .4, .1), 200), setTimeout(() => Be(440, "square", .6, .1), 300)
+}
+
 function Na() {
     R.state === "suspended" && R.resume();
     const e = R.sampleRate * .1,
@@ -3436,10 +3440,10 @@ let In = !1;
 function Da() {
     if (In) return;
     In = !0, R.state === "suspended" && R.resume();
-    
+
     const e = R.createOscillator(),
         t = R.createGain();
-    e.type = "sine", e.frequency.setValueAtTime(220, R.currentTime), e.frequency.setTargetAtTime(225, R.currentTime + 10, 5), t.gain.setValueAtTime(0, R.currentTime), t.gain.linearRampToValueAtTime(.03, R.currentTime + 2);
+    e.type = "sine", e.frequency.setValueAtTime(25, R.currentTime), e.frequency.setTargetAtTime(20, R.currentTime + 10, 5), t.gain.setValueAtTime(0, R.currentTime), t.gain.linearRampToValueAtTime(.03, R.currentTime + 2);
     
     const n = R.createOscillator();
     n.type = "sine", n.frequency.setValueAtTime(329.63, R.currentTime);
@@ -3447,6 +3451,43 @@ function Da() {
     const o = R.createGain();
     o.gain.value = .02, e.connect(t), n.connect(o), o.connect(t), t.connect(R.destination), e.start(), n.start()
 }
+
+const options = {
+    headers: new Headers({ 'content-type': 'audio/ogg' }),
+    mode: 'no-cors',
+    cache: 'default',
+};
+
+function PlayAudio(url, options) {
+    try {
+        if (R.state === "suspended") R.resume();
+        fetch(url, options)
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return response.arrayBuffer();
+            })
+            .then(arrayBuffer => {
+                console.log('Buffer size:', arrayBuffer.byteLength);
+                return R.decodeAudioData(arrayBuffer);
+            })
+            .then(audioBuffer => {
+                const source = R.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(R.destination);
+                source.start();
+            })
+            .catch(error => {
+                console.error('Web Audio decode error:', error);
+            });
+    } catch (error) {
+        console.error('Audio playback error:', error);
+    }
+}
+
+function BgAudio() {
+    PlayAudio('../raspaygana/audio/bg-audio.ogg');
+}
+
 
 const St = [{
         id: "facial",
@@ -3476,9 +3517,10 @@ if (Vo) {
 }
 let Sn = 0;
 
-function _a() {
+function renderScratchGrid() {
     const e = document.getElementById("scratch-grid");
-    e.innerHTML = "", Me.forEach((t, n) => {
+    e.innerHTML = "";
+    Me.forEach((t, n) => {
         const o = document.createElement("div");
         o.className = "scratch-card";
         const r = document.createElement("img");
@@ -3486,6 +3528,27 @@ function _a() {
         const i = document.createElement("canvas");
         i.width = 110, i.height = 110, o.appendChild(i), e.appendChild(o), Ha(i)
     })
+}
+
+function createStartButton() {
+    const g = document.getElementById("title-container");
+    g.innerHTML = "<h1>¡Raspadito Ganador!</h1><br><p>Raspa y descubre tres figuras iguales para obtener un fabuloso premio</p>";
+
+    const f = document.getElementById("button-container");
+    f.innerHTML = "";
+    const s = document.createElement("div");
+    s.className = "button-play";
+    const u = document.createElement("button");
+    u.type = "button";
+    u.textContent = "Play";
+    u.addEventListener("click", () => {
+        BgAudio();
+        renderScratchGrid();
+        f.style.display = "none";
+        g.style.display = "none";
+    });
+    s.appendChild(u);
+    f.appendChild(s);
 }
 
 function Ha(e, t) {
@@ -3534,18 +3597,23 @@ function ja() {
         Xe.toDataURL(`https://wa.me/529223686182?text=${e}`, {
             width: 200,
             margin: 2
-        }).then(t => {
+        })
+        .then(t => {
             setTimeout(() => {
+                const whatsappUrl = `https://wa.me/529223686182?text=${e}`;
                 Ue.fire({
                     title: "¡Felicidades!",
-                    html: `<p>Has ganado: <b>${Ve.name}</b></p>
-                  <img src="${t}" alt="WhatsApp QR" style="margin-top:10px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1);"/>`,
+                    html: `<p>Has ganado:
+                    <br> <b><p>${Ve.name}</b></p>
+                    <img src="${Ve.image}" alt="${Ve.name}" style="margin-top:10px; border-radius:10px; width: 200px; height: auto; box-shadow:0 2px 10px rgba(0,0,0,0.1);"/>`,
                     confirmButtonText: "¡Reclama tu premio!"
                 }).then(() => {
+                    window.open(whatsappUrl, "_blank");
                     location.reload()
                 })
             }, 1e3)
-        }).catch(t => console.error("Error generating QR", t))
+        })
+        .catch(t => console.error("Error generating QR", t))
     } else Oa(), Ue.fire({
         title: "¡Suerte para la próxima!",
         text: "Sigue participando",
@@ -3589,4 +3657,8 @@ function $a() {
         })
     }, 250)
 }
-_a();
+createStartButton();
+
+
+//<img src="${t}" alt="WhatsApp QR" style="margin-top:10px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1);"/>`,
+
